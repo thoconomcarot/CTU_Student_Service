@@ -1,0 +1,12 @@
+Mapping từ OCR_EasyPymu_main.py sang bản tách module:
+
+- Cấu hình, đường dẫn, extension -> config.py
+- clean_text / clean_line / lỗi chung -> common_fix.py
+- should_merge_lines / merge_broken_lines -> line_fix.py
+- format_line_to_markdown / format_text_to_markdown -> markdown_layout.py
+- EasyOCR reader / ocr_image_* / easyocr_result_to_text -> ocr_engine.py
+- table_to_markdown / bbox / table detection -> table_utils.py
+- extract_pdf_hybrid / extract_image_file / save output / process file -> file_processor.py
+- argparse + main() -> main.py
+- thuật ngữ CTU -> ctu_terms.py
+- lỗi hiếm -> rare_fix.py
