@@ -65,7 +65,7 @@ def chay_ba_lop_hau_xu_ly(text: str, cau_hinh: CauHinhOCR) -> str:
 # Bản TableSafe KHÔNG trích bảng bằng PyMuPDF.
 # Lý do: PyMuPDF find_tables() dễ biến đoạn văn bản thường thành bảng giả
 # trong tài liệu hành chính có nhiều dòng thẳng hàng.
-# Nếu trang thật sự có bảng/lưu đồ, hãy dùng main_table_safe.py để router
+# Nếu trang thật sự có bảng/lưu đồ, hãy dùng main.py --engine auto-page để router
 # tự gọi LlamaParse cho riêng các trang đó.
 
 
@@ -118,7 +118,7 @@ def xu_ly_trang_pdf_text(page: fitz.Page, raw_text: str, cau_hinh: CauHinhOCR) -
 
     Bản TableSafe chỉ lấy text thật của trang, sau đó gộp dòng và định dạng
     Markdown. Không gọi page.find_tables() để tránh tạo bảng giả ở các trang
-    văn bản thường. Nếu cần bảng thật, dùng `main_table_safe.py` để LlamaParse
+    văn bản thường. Nếu cần bảng thật, dùng `main.py --engine auto-page` để LlamaParse
     xử lý riêng trang có bảng/lưu đồ.
     """
 
@@ -278,7 +278,7 @@ def tao_metadata_markdown(file_path: str | Path, metadata: dict[str, int], cau_h
         f"- Source file: `{file_path}`",
         f"- Source name: `{Path(file_path).name}`",
         "- Extraction mode: ocr_ctu_tablesafe_v2",
-        "- Parser: PyMuPDF text only; tables handled by LlamaParse in main_table_safe.py",
+        "- Parser: PyMuPDF text only; tables handled by LlamaParse in main.py --engine auto-page",
         "- OCR engine: PaddleOCR detection + VietOCR recognition; fallback PaddleOCR recognition",
         f"- OCR language: {cau_hinh.ngon_ngu_ocr}",
         f"- Render DPI: {cau_hinh.dpi}",
@@ -345,30 +345,80 @@ def tim_file_ho_tro(path: str | Path) -> list[Path]:
 
 
 # =========================================================
-# CLI
+# CLI DUY NHẤT
 # =========================================================
 
 
-DEFAULT_INPUT_PATH = r"D:\Code\CTU_Student_Service\Dataset\02_Attachments\PDFs\CTSV\03_1041KHTH_29-03-2024_HoTroSucKhoe.pdf"
-
-
 def tao_parser() -> argparse.ArgumentParser:
-    """Tạo bộ đọc tham số dòng lệnh cho chương trình."""
+    """Tạo bộ đọc tham số dòng lệnh duy nhất cho toàn bộ pipeline.
 
-    parser = argparse.ArgumentParser(description="OCR CTU TableSafe: PyMuPDF text-only + PaddleOCR + VietOCR, không trích bảng bằng PyMuPDF.")
-    parser.add_argument(
-        "path",
-        nargs="?",
-        default=DEFAULT_INPUT_PATH,
-        help="Đường dẫn file PDF/ảnh/docx hoặc thư mục input. Nếu không nhập path thì dùng DEFAULT_INPUT_PATH trong code."
+    Chỉ còn một file chạy chính là `main.py`.
+
+    Engine:
+    - auto-page: khuyến nghị cho PDF; trang văn bản thường dùng local, trang bảng/lưu đồ dùng LlamaParse.
+    - local: chạy hoàn toàn local, không gọi LlamaParse và không tạo bảng bằng PyMuPDF.
+    - llamaparse: dùng LlamaParse cho toàn bộ file/trang được chọn.
+    """
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "OCR CTU TableSafe: một main duy nhất. "
+            "Local PyMuPDF text/Paddle+VietOCR cho trang thường, "
+            "LlamaParse cho trang bảng/lưu đồ."
+        )
     )
-    
-    parser.add_argument("--output", default=CAU_HINH_MAC_DINH.thu_muc_output, help="Thư mục lưu Markdown output.")
+    parser.add_argument("path", help="Đường dẫn file PDF/ảnh hoặc thư mục input.")
+    parser.add_argument(
+        "--engine",
+        choices=["auto-page", "local", "llamaparse"],
+        default="auto-page",
+        help=(
+            "auto-page: tự route từng trang PDF; "
+            "local: không dùng LlamaParse; "
+            "llamaparse: dùng LlamaParse toàn bộ file/trang."
+        ),
+    )
+    parser.add_argument(
+        "-o", "--output",
+        default=CAU_HINH_MAC_DINH.thu_muc_output,
+        help=(
+            "Nếu là thư mục: thư mục lưu output. "
+            "Nếu là file .md và input là 1 file: ghi đúng file .md đó."
+        ),
+    )
     parser.add_argument("--force", action="store_true", help="Xử lý lại dù output đã tồn tại.")
+
+    # Page range / routing
+    parser.add_argument("--page-start", type=int, default=0, help="Trang bắt đầu, đánh số từ 1. 0 = từ đầu.")
+    parser.add_argument("--page-end", type=int, default=0, help="Trang kết thúc, đánh số từ 1. 0 = đến cuối.")
+    parser.add_argument(
+        "--table-pages",
+        default=None,
+        help="Chỉ định thủ công trang dùng LlamaParse, ví dụ: 4,6,8-10. Bỏ trống thì auto detect.",
+    )
+
+    # LlamaParse options
+    parser.add_argument(
+        "--llama-tier",
+        choices=["fast", "cost_effective", "agentic", "agentic_plus"],
+        default="agentic",
+        help="Tier LlamaParse cho trang bảng/lưu đồ hoặc khi --engine llamaparse.",
+    )
+    parser.add_argument("--xlsx", action="store_true", help="Yêu cầu LlamaParse xuất metadata bảng dạng XLSX nếu SDK hỗ trợ.")
+    parser.add_argument("--spatial", action="store_true", help="Bật spatial text cho bảng/form/layout khó.")
+    parser.add_argument("--disable-cache", action="store_true", help="Không dùng cache của LlamaParse.")
+    parser.add_argument(
+        "--aggressive-tables",
+        action="store_true",
+        help="Bật aggressive table extraction của LlamaParse. Chỉ dùng khi trang thật sự có bảng/lưu đồ phức tạp.",
+    )
+    parser.add_argument("--no-repair-false-tables", action="store_true", help="Tắt hậu xử lý sửa bảng giả của LlamaParse.")
+
+    # Local OCR options
     parser.add_argument(
         "--force-ocr",
         action="store_true",
-        help="Bỏ qua text layer có sẵn trong PDF và OCR lại từ ảnh scan. Dùng cho PDF scan bị lỗi font/text layer.",
+        help="Bỏ qua text layer PDF và OCR lại từ ảnh scan. Dùng khi text layer PDF bị lỗi.",
     )
     parser.add_argument(
         "--no-auto-bad-text-layer-check",
@@ -376,12 +426,15 @@ def tao_parser() -> argparse.ArgumentParser:
         help="Tắt tự động phát hiện text layer OCR cũ bị lỗi. Mặc định đang bật.",
     )
     parser.add_argument("--dpi", type=int, default=CAU_HINH_MAC_DINH.dpi, help="DPI render PDF scan.")
-    parser.add_argument("--page-start", type=int, default=0, help="Trang bắt đầu, đánh số từ 1. 0 = từ đầu.")
-    parser.add_argument("--page-end", type=int, default=0, help="Trang kết thúc, đánh số từ 1. 0 = đến cuối.")
     parser.add_argument("--lang", default=CAU_HINH_MAC_DINH.ngon_ngu_ocr, help="Ngôn ngữ PaddleOCR: vi, latin, en.")
     parser.add_argument("--gpu", action="store_true", help="Bật GPU nếu đã cài Paddle GPU/Torch GPU.")
     parser.add_argument("--no-vietocr", action="store_true", help="Tắt VietOCR, dùng PaddleOCR thuần.")
-    parser.add_argument("--vietocr-model", default=CAU_HINH_MAC_DINH.vietocr_model, choices=["vgg_transformer", "vgg_seq2seq"], help="Model VietOCR.")
+    parser.add_argument(
+        "--vietocr-model",
+        default=CAU_HINH_MAC_DINH.vietocr_model,
+        choices=["vgg_transformer", "vgg_seq2seq"],
+        help="Model VietOCR.",
+    )
     parser.add_argument("--vietocr-weights", default="", help="Đường dẫn weights VietOCR custom nếu có.")
     parser.add_argument("--crop-padding", type=int, default=CAU_HINH_MAC_DINH.padding_crop, help="Padding quanh crop OCR.")
     parser.add_argument("--save-crops", action="store_true", help="Lưu crop VietOCR để debug.")
@@ -389,8 +442,13 @@ def tao_parser() -> argparse.ArgumentParser:
     parser.add_argument("--existing-images-only", action="store_true", help="Chỉ dùng ảnh cache đã có, không render trang mới.")
     parser.add_argument("--no-red-stamp-clean", action="store_true", help="Không xóa con dấu đỏ trước OCR.")
     parser.add_argument("--no-symbol-fallback", action="store_true", help="Không fallback PaddleOCR cho dòng nghi ký tự đặc biệt.")
-    parser.add_argument("--layout-merge-mode", default="conservative", choices=["conservative", "aggressive"], help="Chế độ gộp dòng.")
-    parser.add_argument("--loi-rieng-json", default="", help="File JSON chứa rule sửa lỗi riêng, nếu muốn auto-fix ngoài source.")
+    parser.add_argument(
+        "--layout-merge-mode",
+        default="conservative",
+        choices=["conservative", "aggressive"],
+        help="Chế độ gộp dòng.",
+    )
+    parser.add_argument("--loi-rieng-json", default="", help="File JSON chứa rule sửa lỗi riêng nếu muốn auto-fix ngoài source.")
     parser.add_argument("--no-loi-chung", action="store_true", help="Tắt lớp 1 xử lý lỗi chung.")
     parser.add_argument("--no-tu-dien-ctu", action="store_true", help="Tắt lớp 2 từ điển CTU.")
     parser.add_argument("--no-loi-rieng", action="store_true", help="Tắt lớp 3 lỗi riêng/review.")
@@ -398,14 +456,17 @@ def tao_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def cau_hinh_tu_args(args: argparse.Namespace) -> CauHinhOCR:
-    """Chuyển argparse Namespace thành CauHinhOCR."""
+def cau_hinh_tu_args(args: argparse.Namespace, output_dir: str | Path | None = None) -> CauHinhOCR:
+    """Chuyển argparse Namespace thành CauHinhOCR.
 
-    output = args.output
+    `output_dir` cho phép wrapper truyền thư mục output khi người dùng nhập `-o file.md`.
+    """
+
+    out_dir = str(output_dir or args.output)
     return CauHinhOCR(
-        thu_muc_output=output,
-        thu_muc_anh_tam=os.path.join(output, "temp_images"),
-        thu_muc_bao_cao=os.path.join(output, "review_reports"),
+        thu_muc_output=out_dir,
+        thu_muc_anh_tam=os.path.join(out_dir, "temp_images"),
+        thu_muc_bao_cao=os.path.join(out_dir, "review_reports"),
         dpi=args.dpi,
         trang_bat_dau=args.page_start,
         trang_ket_thuc=args.page_end,
@@ -431,23 +492,159 @@ def cau_hinh_tu_args(args: argparse.Namespace) -> CauHinhOCR:
     )
 
 
-def main() -> None:
-    """Entry point CLI."""
+def la_output_file_md(output_value: str | Path) -> bool:
+    """Kiểm tra `--output` có phải đường dẫn file Markdown hay không."""
+    return Path(output_value).suffix.lower() == ".md"
 
-    parser = tao_parser()
-    args = parser.parse_args()
-    cau_hinh = cau_hinh_tu_args(args)
+
+def tao_output_path(input_file: Path, output_value: str | Path) -> Path:
+    """Tạo output path cho một file input.
+
+    Nếu `--output` là file .md thì dùng đúng file đó. Nếu là thư mục thì tạo
+    `<output>/<ten_file>_structured.md`.
+    """
+    out = Path(output_value)
+    if la_output_file_md(out):
+        return out
+    return out / f"{ten_file_an_toan(input_file.stem)}_structured.md"
+
+
+def can_use_table_safe(input_file: Path, engine: str) -> bool:
+    """Quyết định file có nên chạy router TableSafe cấp trang hay không."""
+    return input_file.suffix.lower() == ".pdf" and engine in {"auto-page", "llamaparse", "local"}
+
+
+def xu_ly_file_bang_cli(input_file: Path, args: argparse.Namespace, force: bool = False) -> Path | None:
+    """Xử lý một file theo CLI duy nhất.
+
+    PDF sẽ dùng router TableSafe để tránh bảng giả PyMuPDF. Ảnh dùng local OCR.
+    Các định dạng DOCX/PPTX/XLSX chỉ chạy được khi `--engine llamaparse` vì local
+    PadViet hiện chỉ hỗ trợ PDF/ảnh.
+    """
+    output_path = tao_output_path(input_file, args.output)
+    output_dir = output_path.parent
+
+    if output_path.exists() and not force:
+        print(f"[SKIP] Output đã tồn tại: {output_path}")
+        return output_path
+
+    cau_hinh = cau_hinh_tu_args(args, output_dir=output_dir)
     tao_thu_muc_can_thiet(cau_hinh)
 
-    files = tim_file_ho_tro(args.path)
+    ext = input_file.suffix.lower()
+    if ext == ".pdf":
+        # Import lazy để tránh vòng import khi hybrid_page_router cần gọi lại main.xu_ly_pdf.
+        from hybrid_page_router import run_table_safe_pdf
+
+        print(f"[PROCESS] PDF TableSafe: {input_file}")
+        return run_table_safe_pdf(
+            input_path=input_file,
+            output_path=output_path,
+            engine=args.engine,
+            page_start=args.page_start or None,
+            page_end=args.page_end or None,
+            manual_table_pages=args.table_pages,
+            llama_tier=args.llama_tier,
+            export_tables_as_xlsx=args.xlsx,
+            preserve_spatial_text=args.spatial,
+            disable_cache=args.disable_cache,
+            aggressive_tables=args.aggressive_tables,
+            repair_false_tables=not args.no_repair_false_tables,
+            base_config=cau_hinh,
+        )
+
+    if ext in DUOI_ANH:
+        if args.engine == "llamaparse":
+            from hybrid_router import run_hybrid_parse
+
+            print(f"[PROCESS] Image bằng LlamaParse: {input_file}")
+            return run_hybrid_parse(
+                input_path=input_file,
+                output_path=output_path,
+                engine="llamaparse",
+                page_start=args.page_start or None,
+                page_end=args.page_end or None,
+                llama_tier=args.llama_tier,
+                export_tables_as_xlsx=args.xlsx,
+                preserve_spatial_text=args.spatial,
+                disable_cache=args.disable_cache,
+                aggressive_tables=args.aggressive_tables,
+                repair_false_tables=not args.no_repair_false_tables,
+            )
+
+        print(f"[PROCESS] Image local OCR: {input_file}")
+        body, metadata = xu_ly_file_anh(input_file, cau_hinh)
+        final_md = tao_metadata_markdown(input_file, metadata, cau_hinh) + body
+        ghi_text_unicode(output_path, final_md)
+        return output_path
+
+    if args.engine == "llamaparse":
+        from hybrid_router import run_hybrid_parse
+
+        print(f"[PROCESS] Document bằng LlamaParse: {input_file}")
+        return run_hybrid_parse(
+            input_path=input_file,
+            output_path=output_path,
+            engine="llamaparse",
+            page_start=args.page_start or None,
+            page_end=args.page_end or None,
+            llama_tier=args.llama_tier,
+            export_tables_as_xlsx=args.xlsx,
+            preserve_spatial_text=args.spatial,
+            disable_cache=args.disable_cache,
+            aggressive_tables=args.aggressive_tables,
+            repair_false_tables=not args.no_repair_false_tables,
+        )
+
+    print(f"[SKIP] Định dạng chưa hỗ trợ ở local: {input_file.suffix}. Muốn xử lý hãy dùng --engine llamaparse.")
+    return None
+
+
+def tim_file_cli(path: str | Path, engine: str) -> list[Path]:
+    """Tìm file phù hợp cho CLI.
+
+    Local hỗ trợ PDF/ảnh. LlamaParse có thể nhận thêm DOCX/PPTX/XLSX/CSV/HTML.
+    """
+    p = Path(path)
+    extra_doc_exts = {".docx", ".pptx", ".xlsx", ".csv", ".html"}
+    allowed = set(DUOI_PDF).union(DUOI_ANH)
+    if engine == "llamaparse":
+        allowed.update(extra_doc_exts)
+
+    if p.is_file():
+        return [p] if p.suffix.lower() in allowed else []
+
+    files: list[Path] = []
+    if p.is_dir():
+        for item in sorted(p.rglob("*")):
+            if item.is_file() and item.suffix.lower() in allowed:
+                files.append(item)
+    return files
+
+
+def main() -> None:
+    """Entry point duy nhất của source.
+
+    Sau khi gộp, chỉ chạy:
+        python main.py "file.pdf" --engine auto-page
+    """
+
+    args = tao_parser().parse_args()
+    files = tim_file_cli(args.path, args.engine)
     if not files:
-        print(f"[WARN] Không tìm thấy file PDF/ảnh trong: {args.path}")
+        print(f"[WARN] Không tìm thấy file hỗ trợ trong: {args.path}")
+        return
+
+    if len(files) > 1 and la_output_file_md(args.output):
+        print("[ERROR] Khi input là thư mục/nhiều file, --output phải là thư mục, không được là file .md")
         return
 
     print(f"[INFO] Tìm thấy {len(files)} file cần xử lý")
     for file_path in files:
         try:
-            xu_ly_mot_file(file_path, cau_hinh, force=args.force)
+            out = xu_ly_file_bang_cli(file_path, args, force=args.force)
+            if out:
+                print(f"[OK] Đã tạo Markdown: {Path(out).resolve()}")
         except Exception as exc:
             print(f"[ERROR] Lỗi khi xử lý {file_path}: {exc}")
 

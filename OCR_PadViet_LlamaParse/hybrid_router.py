@@ -110,7 +110,7 @@ def run_local_paddle_vietocr(
     - tao_metadata_markdown(...)
 
     Adapter này tự tạo cấu hình CauHinhOCR, gọi đúng hàm theo đuôi file,
-    rồi ghi Markdown ra đúng `output_path` mà main_hybrid_llama.py yêu cầu.
+    rồi ghi Markdown ra đúng `output_path` mà main.py yêu cầu.
     """
     from config import CAU_HINH_MAC_DINH, DUOI_ANH, DUOI_PDF, ghi_text_unicode, tao_thu_muc_can_thiet
     from ctu_terms import canh_bao_thuat_ngu_ctu

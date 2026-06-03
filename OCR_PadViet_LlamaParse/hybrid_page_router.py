@@ -103,17 +103,27 @@ def split_llama_markdown_by_page(markdown: str, expected_pages: list[int]) -> di
     return result
 
 
-def local_body_for_range(input_path: str | Path, output_dir: str | Path, page_start: int, page_end: int):
+def local_body_for_range(
+    input_path: str | Path,
+    output_dir: str | Path,
+    page_start: int,
+    page_end: int,
+    base_config=None,
+):
     """Chạy pipeline local TableSafe cho một khoảng trang PDF.
 
     Hàm dùng `main.xu_ly_pdf` nhưng cấu hình page_start/page_end theo khoảng cần xử lý.
     Pipeline local đã bị tắt hoàn toàn phần tạo bảng bằng PyMuPDF.
+
+    `base_config` giúp main.py truyền các tùy chọn CLI như DPI, language, force OCR,
+    VietOCR model... vào router TableSafe, thay vì luôn dùng default cứng.
     """
     from main import xu_ly_pdf
 
     out_dir = Path(output_dir)
+    cfg_source = base_config or CAU_HINH_MAC_DINH
     cfg = replace(
-        CAU_HINH_MAC_DINH,
+        cfg_source,
         thu_muc_output=str(out_dir),
         thu_muc_anh_tam=str(out_dir / "temp_images"),
         thu_muc_bao_cao=str(out_dir / "review_reports"),
@@ -240,6 +250,7 @@ def run_table_safe_pdf(
     disable_cache: bool = False,
     aggressive_tables: bool = False,
     repair_false_tables: bool = True,
+    base_config=None,
 ) -> Path:
     """Chạy pipeline TableSafe chính cho PDF.
 
@@ -253,7 +264,7 @@ def run_table_safe_pdf(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if input_path.suffix.lower() != ".pdf":
-        raise ValueError("main_table_safe.py hiện tối ưu cho PDF. Ảnh/DOCX có thể dùng main_hybrid_llama.py.")
+        raise ValueError("TableSafe cấp trang hiện tối ưu cho PDF. Ảnh/DOCX hãy chạy main.py --engine local hoặc --engine llamaparse.")
 
     engine = engine.lower().strip()
     if engine not in {"local", "llamaparse", "auto-page"}:
@@ -281,7 +292,7 @@ def run_table_safe_pdf(
 
     # 1) Chạy local cho các trang văn bản thường.
     for group_start, group_end in group_contiguous_pages(local_pages):
-        body, _metadata = local_body_for_range(input_path, output_path.parent, group_start, group_end)
+        body, _metadata = local_body_for_range(input_path, output_path.parent, group_start, group_end, base_config=base_config)
         page_blocks.update(split_local_markdown_by_page(body))
 
     # 2) Chạy LlamaParse cho các trang bảng/lưu đồ thật.
