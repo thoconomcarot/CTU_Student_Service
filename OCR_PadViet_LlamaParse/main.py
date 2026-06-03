@@ -11,16 +11,15 @@ Pipeline tổng quát:
 6. Gộp dòng, định dạng Markdown, ghi output + review report.
 """
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 from __future__ import annotations
-
 import argparse
 import os
 from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import fitz  # PyMuPDF
 
