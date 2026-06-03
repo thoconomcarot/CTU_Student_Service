@@ -11,7 +11,9 @@ Pipeline tổng quát:
 6. Gộp dòng, định dạng Markdown, ghi output + review report.
 """
 
+from dotenv import load_dotenv
 
+load_dotenv()
 
 from __future__ import annotations
 

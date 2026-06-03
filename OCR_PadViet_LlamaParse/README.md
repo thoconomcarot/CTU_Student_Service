@@ -82,3 +82,35 @@ python main.py "file.pdf" --engine llamaparse --llama-tier agentic --page-start 
 - Không chạy các file main cũ nữa vì đã bị xóa khỏi bản này.
 - Muốn trang 4 tạo bảng chắc chắn thì thêm `--table-pages 4`.
 - `--aggressive-tables` chỉ dùng khi chắc chắn trang đó là bảng/lưu đồ thật, không bật mặc định.
+
+## Cập nhật sửa lỗi tên bảng bị lặp trong header
+
+Bản này đã thêm hậu xử lý trong `llamaparse_engine.py`:
+
+- Nếu LlamaParse trả về bảng dạng `TÊN BẢNG<br/>Bước`, `TÊN BẢNG<br/>Lưu đồ`, ...
+- Code sẽ đưa `TÊN BẢNG` ra thành heading riêng phía trên bảng.
+- Header bảng chỉ còn tên cột thật: `Bước`, `Lưu đồ`, `Nội dung công việc`, `Người thực hiện`, `Thời gian thực hiện`, `Ghi chú`.
+
+Lý do: Markdown table chuẩn không hỗ trợ gộp cột (`colspan`), nên biểu diễn tên bảng tốt nhất là heading riêng phía trên bảng.
+
+## Cấu hình API key bằng file `.env`
+
+Tạo file `.env` cùng thư mục với `main.py`:
+
+```env
+LLAMA_CLOUD_API_KEY=llx_API_KEY_CUA_BAN
+```
+
+Cài thư viện đọc `.env` nếu chưa có:
+
+```powershell
+python -m pip install python-dotenv
+```
+
+Kiểm tra code có đọc được key không:
+
+```powershell
+python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('OK' if os.getenv('LLAMA_CLOUD_API_KEY') else 'MISSING')"
+```
+
+File `.env` đã được đưa vào `.gitignore`, không được push lên Git. Chỉ push `.env.example` để làm mẫu.

@@ -27,6 +27,43 @@ from pathlib import Path
 from typing import Literal, Optional
 
 
+def _load_dotenv_if_available() -> list[Path]:
+    """
+    Nạp API key từ file .env nếu có.
+
+    Hàm này cố ý tìm .env ở 3 vị trí thường gặp:
+    1. Thư mục chứa file source hiện tại.
+    2. Thư mục đang chạy lệnh PowerShell/cmd.
+    3. Thư mục cha của source, phòng khi người dùng chạy từ project root.
+
+    Nếu chưa cài python-dotenv thì hàm không làm chương trình lỗi ngay;
+    khi thiếu key, thông báo lỗi sẽ chỉ rõ cách cài.
+    """
+    loaded_paths: list[Path] = []
+    candidates = [
+        Path(__file__).resolve().parent / ".env",
+        Path.cwd() / ".env",
+        Path(__file__).resolve().parent.parent / ".env",
+    ]
+
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return loaded_paths
+
+    seen: set[Path] = set()
+    for env_path in candidates:
+        env_path = env_path.resolve()
+        if env_path in seen:
+            continue
+        seen.add(env_path)
+        if env_path.exists():
+            load_dotenv(dotenv_path=env_path, override=False)
+            loaded_paths.append(env_path)
+
+    return loaded_paths
+
+
 Tier = Literal["fast", "cost_effective", "agentic", "agentic_plus"]
 ChartMode = Literal["efficient", "agentic", "agentic_plus"]
 
@@ -101,6 +138,8 @@ def _default_ctu_prompt() -> str:
         "Không tự tóm tắt nội dung. Xuất Markdown sạch để dùng cho RAG. "
         "QUY TẮC BẢNG RẤT QUAN TRỌNG: Chỉ tạo Markdown table khi trên trang thật sự có bảng rõ ràng, có đường kẻ/cell/cột/hàng hoặc header cột như Bước, Lưu đồ, Nội dung công việc, Người thực hiện, Thời gian, Ghi chú. "
         "Không được biến tiêu đề, mục 1/1.1/a/b/c, hoặc đoạn văn bản thường thành bảng. "
+        "Nếu bảng có tên bảng nằm phía trên các cột, hãy đặt tên bảng thành heading riêng trước bảng; không lặp tên bảng trong từng header cột. "
+        "Header bảng chỉ giữ tên cột thật như Bước, Lưu đồ, Nội dung công việc, Người thực hiện, Thời gian thực hiện, Ghi chú. "
         "Nếu chỉ là văn bản bình thường, hãy giữ thành heading, paragraph và bullet list."
     )
 
@@ -204,6 +243,125 @@ def _split_table_row(line: str) -> list[str]:
     return [re.sub(r"\s+", " ", c).strip(" *") for c in s.split("|")]
 
 
+_TABLE_CELL_BREAK_RE = re.compile(r"<br\s*/?>", flags=re.IGNORECASE)
+
+
+def _normalize_title_key(value: str) -> str:
+    """Chuẩn hóa tên bảng để so sánh lặp lại trong nhiều ô header."""
+    value = _TABLE_CELL_BREAK_RE.sub(" ", value)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = re.sub(r"[*_`#]", "", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    return value.upper()
+
+
+def _clean_table_title(value: str) -> str:
+    """Làm sạch tên bảng trước khi đưa ra heading riêng bên trên bảng."""
+    value = _TABLE_CELL_BREAK_RE.sub(" ", value)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = re.sub(r"[*_`#]", "", value)
+    value = re.sub(r"\s+", " ", value).strip(" |")
+    return value
+
+
+def _find_repeated_header_title(header_cells: list[str]) -> tuple[str | None, str | None]:
+    """Tìm tên bảng bị LlamaParse lặp trong từng ô header.
+
+    Ví dụ lỗi thường gặp:
+        | TÊN BẢNG<br/>Bước | TÊN BẢNG<br/>Lưu đồ | ... |
+
+    Hàm trả về (title_key, title_text) nếu phần trước <br/> lặp lại ở nhiều ô.
+    """
+    candidates: dict[str, tuple[str, int]] = {}
+    for cell in header_cells:
+        parts = _TABLE_CELL_BREAK_RE.split(cell, maxsplit=1)
+        if len(parts) < 2:
+            continue
+        title_text = _clean_table_title(parts[0])
+        title_key = _normalize_title_key(title_text)
+        if len(title_key) < 12:
+            continue
+        old_text, count = candidates.get(title_key, (title_text, 0))
+        candidates[title_key] = (old_text, count + 1)
+
+    if not candidates:
+        return None, None
+
+    title_key, (title_text, count) = max(candidates.items(), key=lambda item: item[1][1])
+    # Chỉ coi là lỗi nếu tên bảng lặp ở ít nhất 2 cột. Với bảng thật như trang 4 thường lặp ở toàn bộ cột.
+    if count < 2:
+        return None, None
+    return title_key, title_text
+
+
+def _strip_repeated_title_from_cell(cell: str, title_key: str) -> str:
+    """Bỏ phần tên bảng lặp ở đầu ô header, giữ lại tên cột thật."""
+    parts = _TABLE_CELL_BREAK_RE.split(cell, maxsplit=1)
+    if len(parts) < 2:
+        return cell.strip()
+    first_key = _normalize_title_key(parts[0])
+    if first_key == title_key:
+        return parts[1].strip() or cell.strip()
+    return cell.strip()
+
+
+def _previous_lines_contain_title(out_lines: list[str], title_key: str, lookback: int = 6) -> bool:
+    """Kiểm tra tên bảng đã xuất hiện ngay trước bảng chưa để tránh thêm heading trùng."""
+    checked = 0
+    for line in reversed(out_lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("<!--"):
+            continue
+        checked += 1
+        if title_key and title_key in _normalize_title_key(stripped):
+            return True
+        if checked >= lookback:
+            break
+    return False
+
+
+def normalize_repeated_table_titles(markdown: str) -> str:
+    """Sửa lỗi tên bảng bị lặp trong từng cột header của Markdown table.
+
+    Markdown chuẩn không hỗ trợ gộp cột (`colspan`). Vì vậy cách đúng cho RAG là:
+    - đưa tên bảng thành một heading riêng phía trên bảng;
+    - header của bảng chỉ giữ tên cột thật: Bước, Lưu đồ, Nội dung công việc,...
+
+    Hàm này không đụng vào nội dung các dòng dữ liệu, chỉ sửa dòng header của bảng.
+    """
+    lines = markdown.split("\n")
+    out: list[str] = []
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        # Một bảng Markdown hợp lệ có dòng header ngay trước dòng separator.
+        if "|" in line and i + 1 < len(lines) and _is_table_separator(lines[i + 1]):
+            header_cells = _split_table_row(line)
+            title_key, title_text = _find_repeated_header_title(header_cells)
+            if title_key and title_text:
+                new_cells = [_strip_repeated_title_from_cell(c, title_key) for c in header_cells]
+                # Bỏ cell rỗng ở hai đầu nếu có, nhưng giữ số cột thực tế.
+                new_header = "| " + " | ".join(c or " " for c in new_cells) + " |"
+
+                if not _previous_lines_contain_title(out, title_key):
+                    if out and out[-1].strip():
+                        out.append("")
+                    out.append(f"## {title_text}")
+                    out.append("")
+
+                out.append(new_header)
+                i += 1
+                continue
+
+        out.append(line)
+        i += 1
+
+    return "\n".join(out)
+
+
 def _looks_like_false_table(table_lines: list[str]) -> bool:
     """
     Heuristic nhận diện bảng giả do OCR/parser tạo nhầm từ văn bản thường.
@@ -302,6 +460,11 @@ def normalize_llamaparse_markdown(markdown: str, repair_false_tables: bool = Tru
     """Hậu xử lý nhẹ sau LlamaParse để hợp với pipeline CTU."""
     text = markdown.replace("\r\n", "\n").replace("\r", "\n")
 
+    # LlamaParse đôi khi biểu diễn tên bảng dạng cell gộp bằng cách lặp lại
+    # tên bảng trong từng ô header. Markdown không hỗ trợ colspan nên chuyển
+    # tên bảng thành heading riêng và chỉ giữ tên cột thật trong header.
+    text = normalize_repeated_table_titles(text)
+
     if repair_false_tables:
         text = repair_false_markdown_tables(text)
 
@@ -354,10 +517,22 @@ def parse_with_llamaparse(input_path: str | Path, cfg: Optional[LlamaParseConfig
     cfg = cfg or LlamaParseConfig()
     file_path = _validate_file(input_path)
 
+    loaded_env_paths = _load_dotenv_if_available()
     if not os.getenv("LLAMA_CLOUD_API_KEY"):
+        searched_paths = [
+            Path(__file__).resolve().parent / ".env",
+            Path.cwd() / ".env",
+            Path(__file__).resolve().parent.parent / ".env",
+        ]
+        searched = "; ".join(str(p.resolve()) for p in searched_paths)
+        loaded = ", ".join(str(p) for p in loaded_env_paths) or "không có"
         raise EnvironmentError(
-            "Thiếu biến môi trường LLAMA_CLOUD_API_KEY. "
-            "PowerShell: setx LLAMA_CLOUD_API_KEY \"llx-...\" rồi mở lại terminal."
+            "Thiếu LLAMA_CLOUD_API_KEY. "
+            "Nếu dùng file .env, hãy đặt file .env cùng thư mục với main.py và ghi dòng: "
+            "LLAMA_CLOUD_API_KEY=llx-API_KEY_CUA_BAN. "
+            "Nếu chưa cài dotenv, chạy: python -m pip install python-dotenv. "
+            "Hoặc set biến môi trường PowerShell: $env:LLAMA_CLOUD_API_KEY=\"llx-...\". "
+            f"Đường dẫn .env đã tìm: {searched}. Đã nạp: {loaded}."
         )
 
     try:
