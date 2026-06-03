@@ -1,0 +1,6 @@
+# OCR Review Report
+
+File gốc: D:\Code\CTU_Student_Service\Dataset\02_Attachments\PDFs\CTSV\03_1041KHTH_29-03-2024_HoTroSucKhoe.pdf
+
+## Dòng/cụm cần kiểm tra
+- Dòng 149: cụm số/chữ có thể là OCR sai: 1. Khi nhan duoc thong tin tinh huong dQtxuat v~ tam ly, sire khoe do c6 vfin hoc t~p/nguai hoc Thông báo, don vi quan ly dao t<;10c6 trach nhiem xu 1yd6ng thai bao cao cho Ban Giam hieu, twang hop cdn thiet thi thong tin ph6i hop xu ly voi cac don vi c6 lien quan trong va ngoai Truong.

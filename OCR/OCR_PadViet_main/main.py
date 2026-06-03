@@ -11,6 +11,8 @@ Pipeline tổng quát:
 6. Gộp dòng, định dạng Markdown, ghi output + review report.
 """
 
+
+
 from __future__ import annotations
 
 import argparse
@@ -368,11 +370,20 @@ def tim_file_ho_tro(path: str | Path) -> list[Path]:
 # =========================================================
 
 
+DEFAULT_INPUT_PATH = r"D:\Code\CTU_Student_Service\Dataset\02_Attachments\PDFs\CTSV\QuyTrinh4-Congtacsinhvien.pdf"
+
+
 def tao_parser() -> argparse.ArgumentParser:
     """Tạo bộ đọc tham số dòng lệnh cho chương trình."""
 
     parser = argparse.ArgumentParser(description="OCR CTU sạch: PyMuPDF + PaddleOCR + VietOCR + hậu xử lý 3 lớp.")
-    parser.add_argument("path", nargs="?", default="input", help="Đường dẫn file PDF/ảnh hoặc thư mục input.")
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_INPUT_PATH,
+        help="Đường dẫn file PDF/ảnh/docx hoặc thư mục input. Nếu không nhập path thì dùng DEFAULT_INPUT_PATH trong code."
+    )
+    
     parser.add_argument("--output", default=CAU_HINH_MAC_DINH.thu_muc_output, help="Thư mục lưu Markdown output.")
     parser.add_argument("--force", action="store_true", help="Xử lý lại dù output đã tồn tại.")
     parser.add_argument("--dpi", type=int, default=CAU_HINH_MAC_DINH.dpi, help="DPI render PDF scan.")

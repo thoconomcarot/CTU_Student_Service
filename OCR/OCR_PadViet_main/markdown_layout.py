@@ -54,8 +54,16 @@ def la_tieu_de_doc_lap(line: str) -> bool:
         "noi quy",
         "phu luc",
         "bieu mau",
+        "quy trinh",
     }
     return key in exact_titles
+
+
+def la_heading_quy_trinh(line: str) -> bool:
+    """Nhận diện dòng bắt đầu bằng `Quy trình`."""
+
+    line = lam_sach_dong(line)
+    return bool(re.match(r"^(Quy trình|QUY TRÌNH|Quy trinh|QUY TRINH)\b", line))
 
 
 def la_dong_co_cau_truc(line: str) -> bool:

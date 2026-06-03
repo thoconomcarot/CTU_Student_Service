@@ -15,6 +15,96 @@ import os
 from pathlib import Path
 from typing import Any
 
+import re
+
+
+BAD_OCR_PATTERNS = [
+    "BQ GIAO",
+    "Dl)C",
+    "DAo T~o",
+    "TRUONGD",
+    "D~IHQ",
+    "cANTHa",
+    "DQc l",
+    "H~nh",
+    "QUYETDJNH",
+    "Gido due",
+    "Ludt",
+    "a6i",
+    "b6 sung",
+    "vAn",
+    "sire khoe",
+    "ngO'01",
+    "Di~u",
+    "Can Clf",
+    "thea",
+]
+
+
+EXPECTED_VIETNAMESE_KEYWORDS = [
+    "BỘ GIÁO DỤC",
+    "ĐÀO TẠO",
+    "TRƯỜNG ĐẠI HỌC CẦN THƠ",
+    "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+    "Độc lập",
+    "Tự do",
+    "Hạnh phúc",
+    "QUYẾT ĐỊNH",
+    "Điều",
+    "Cần Thơ",
+]
+
+
+def is_bad_pdf_text_layer(text: str) -> bool:
+    """
+    Phát hiện PDF scan có text layer OCR cũ bị lỗi.
+    Nếu text layer bị lỗi thì không dùng page.get_text(), mà phải OCR lại từ ảnh.
+    """
+
+    if not text or len(text.strip()) < 50:
+        return True
+
+    sample = text[:3000]
+
+    bad_count = 0
+    for pattern in BAD_OCR_PATTERNS:
+        if pattern in sample:
+            bad_count += 1
+
+    # Đếm ký tự lạ hay xuất hiện khi OCR/encoding hỏng
+    weird_chars = len(re.findall(r"[~\}\{\]\[\)\(]", sample))
+
+    # Đếm từ bị dính liền kiểu TRUONGDAIHOC, CONGHOA, QUYETDJNH
+    glued_upper_words = len(re.findall(r"\b[A-ZĐ]{8,}\b", sample))
+
+    # Tỷ lệ ký tự tiếng Việt có dấu
+    vietnamese_marks = len(re.findall(
+        r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễ"
+        r"ìíịỉĩòóọỏõôồốộổỗơờớợởỡ"
+        r"ùúụủũưừứựửữỳýỵỷỹđ"
+        r"ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄ"
+        r"ÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ"
+        r"ÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]",
+        sample
+    ))
+
+    letters = len(re.findall(r"[A-Za-zÀ-ỹĐđ]", sample))
+    mark_ratio = vietnamese_marks / max(letters, 1)
+
+    # Nếu có nhiều mẫu lỗi rõ ràng thì chắc chắn text layer hỏng
+    if bad_count >= 3:
+        return True
+
+    # Nếu nhiều ký tự lạ + ít dấu tiếng Việt
+    if weird_chars >= 8 and mark_ratio < 0.04:
+        return True
+
+    # Nếu nhiều chữ in hoa dính liền bất thường
+    if glued_upper_words >= 5 and mark_ratio < 0.05:
+        return True
+
+    return False
+
 # Set env trước khi import paddle để ổn định CPU Windows.
 os.environ.setdefault("FLAGS_use_mkldnn", "0")
 os.environ.setdefault("FLAGS_enable_mkldnn", "0")

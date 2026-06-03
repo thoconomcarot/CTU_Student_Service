@@ -1,0 +1,6 @@
+# OCR Review Report
+
+File gốc: D:\Code\CTU_Student_Service\Dataset\02_Attachments\PDFs\CTSV\QD1813_QD_ban_hanh_Quy_dinh_cong_tac_hoc_vu_2021.pdf
+
+## Dòng/cụm cần kiểm tra
+- Dòng 151: dòng Email chưa có @, cần kiểm tra: Sinh viên hệ chính quy của Trường ĐHCT là những người đã trúng tuyển kỳ thi tuyến sinh hoặc được xét tuyến và có quyết định thu nhận vào học hệ chính quy của Trường. Mỗi SV sẽ được cấp một mã số SV, thẻ SV và địa chỉ thư điện tử (email) để sử dụng trong suốt quá trình theo học tại Trường.

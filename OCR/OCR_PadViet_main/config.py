@@ -76,7 +76,7 @@ class CauHinhOCR:
 
 
 CAU_HINH_MAC_DINH = CauHinhOCR()
-DUOI_PDF = {".pdf"}
+DUOI_PDF = {".pdf", ".doc", ".docx"}
 DUOI_ANH = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 
 

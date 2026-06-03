@@ -1,0 +1,6 @@
+# OCR Review Report
+
+File gốc: D:\Code\CTU_Student_Service\Dataset\02_Attachments\DOCX\CTSV\7_don_de_nghi_chuyen_ctdt.docx
+
+## Dòng/cụm cần kiểm tra
+- Dòng 39: dòng Email chưa có @, cần kiểm tra: - Email:

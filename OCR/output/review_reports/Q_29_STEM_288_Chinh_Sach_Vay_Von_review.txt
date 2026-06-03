@@ -1,0 +1,6 @@
+# OCR Review Report
+
+File gốc: D:\Code\CTU_Student_Service\Dataset\02_Attachments\PDFs\CTSV\Q_29_STEM_288_Chinh_Sach_Vay_Von.pdf
+
+## Dòng/cụm cần kiểm tra
+- Dòng 643: còn dấu '?' cần kiểm tra: Có thay döi nganh, linh vuc Đào tạo so vói nam truöc khöng?Có
