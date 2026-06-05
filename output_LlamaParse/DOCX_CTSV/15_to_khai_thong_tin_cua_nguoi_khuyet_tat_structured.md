@@ -1,0 +1,70 @@
+<!-- page: 1 -->
+
+MẪU SỐ 01
+
+(Ban hành kèm theo Thông tư số 26/2012/TT-BLĐTBXH ngày 12 tháng 11 năm 2012)
+
+**CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM**
+**Độc lập - Tự do - Hạnh phúc**
+----------------
+
+# TỜ KHAI THÔNG TIN CỦA NGƯỜI KHUYẾT TẬT
+## Phần I
+
+## CÁ NHÂN NGƯỜI KHUYẾT TẬT
+
+* **1. Họ và tên (Viết chữ in hoa)**:
+* **2. Sinh ngày** **tháng** **năm**
+* **3. Giới tính**:
+* **4. Nơi đăng ký thường trú hiện nay**:
+* **5. Nơi sinh**:
+* **6. Dân tộc**:
+* **7. Dạng tật**:
+
+| 7.1. Khuyết tật vận động | □ | 7.4. Khuyết tật thần kinh, tâm thần | □ |
+| --- | --- | --- | --- |
+| 7.2. Khuyết tật nghe, nói | □ | 7.5. Khuyết tật trí tuệ | □ |
+| 7.3. Khuyết tật nhìn | □ | 7.6. Khuyết tật khá&#x63;*(ghi rõ)*…… | □ |
+| 8. Mức độ khuyết tật | □ | | |
+| 8.1. Đặc biệt nặng | □ | | |
+| 8.2. Nặng | □ | | |
+| 8.3. Nhẹ | □ | | |
+
+**9. Đang hưởng chế độ nào sau đây:**
+
+| Loại hình | Mức/tháng (1000 đ) |
+| --- | --- |
+| 9.1. Đang hưởng lương hưu hàng tháng | |
+| 9.2. Trợ cấp bảo hiểm xã hội hàng tháng | |
+| 9.3. Trợ cấp ưu đãi người có công hàng tháng | |
+| 9.4. Trợ cấp bảo trợ xã hội hàng tháng | |
+| 9.5. Các khoản trợ cấp, phụ cấp hàng tháng khác | |
+
+**10. Thuộc hộ gia đình nghèo hay không nghèo**:
+
+<!-- page: 2 -->
+
+11. Các loại giấy tờ kèm theo Tờ khai này (nếu có, ghi cụ thể):
+[________________________________________________________________________________]
+
+Tôi xin cam đoan những lời khai trên là đúng sự thực, nếu có điều gì khai man tôi xin chịu trách nhiệm hoàn toàn.
+
+| | *Ngày …. tháng … năm 20…*(Người khai ký, ghi rõ họ tên) |
+| - | ------------------------------------------------------- |
+
+# Phần II
+# KẾT LUẬN CỦA HỘI ĐỒNG XÉT DUYỆT TRỢ CẤP XÃ HỘI CẤP XÃ
+
+Hội đồng xét duyệt trợ cấp xã hội xã/phường/thị trấn: đã xem xét hồ sơ, xác minh thông tin cá nhân của [________________________________________________] và họp ngày tháng năm thống nhất kết luận về thông tin của Ông (bà) khai như sau:
+
+1. Về kê khai thông tin của người khuyết tật: (đầy đủ, chính xác, còn thiếu, giấy tờ bổ sung...): [________________________________________________________________________]
+[________________________________________________________________________________]
+
+2. Kết luận ông (bà) [____________________] thuộc diện hưởng trợ cấp xã hội hàng tháng đối với người khuyết tật [________________________________________________________________]
+[________________________________________________________________________________]
+[________________________________________________________________________________]
+
+Ngày .... tháng .... năm 20...
+
+| **Thư ký Hội đồng***(Ký, ghi rõ họ tên)* | *Ngày …. tháng …. năm 20…***Chủ tịch Hội đồng***(Ký, ghi rõ họ tên và đóng dấu)* |
+| --- | --- |

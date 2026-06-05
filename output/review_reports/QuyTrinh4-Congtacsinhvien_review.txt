@@ -1,7 +1,0 @@
-# OCR Review Report
-
-File gốc: D:\Code\CTU_Student_Service\Dataset\02_Attachments\PDFs\CTSV\QuyTrinh4-Congtacsinhvien.pdf
-
-## Dòng/cụm cần kiểm tra
-- Dòng 957: dòng Email chưa có @, cần kiểm tra: Chú thích: (*) sau khi tiếp nhận đăng ký online dự tuyển học bổng, nếu hồ sơ không đạt thì thông báo lại cho sinh viên qua email hoặc trực tiếp bằng điện thoại.
-- Dòng 1007: dòng Email chưa có @, cần kiểm tra: | | báo lại cho sinh viên qua email hoặc trực tiếp bằng điện thoại. | | | | | | | | | | | | | |
