@@ -39,7 +39,6 @@ from common_fix import hau_xu_ly_loi_chung
 from rare_fix import ghi_bao_cao_review, hau_xu_ly_loi_rieng, tao_bao_cao_review
 from text_layer_quality import is_bad_pdf_text_layer
 from ctu_terms import canh_bao_thuat_ngu_ctu, hau_xu_ly_tu_dien_ctu
-from table_form_postprocess import postprocess_final_markdown
 
 
 # =========================================================
@@ -321,7 +320,6 @@ def xu_ly_mot_file(file_path: str | Path, cau_hinh: CauHinhOCR, force: bool = Fa
         body, metadata = xu_ly_file_anh(path, cau_hinh)
 
     final_md = tao_metadata_markdown(path, metadata, cau_hinh) + body
-    final_md = postprocess_final_markdown(final_md)
     ghi_text_unicode(out_path, final_md)
 
     extra_warnings = canh_bao_thuat_ngu_ctu(final_md) if cau_hinh.dung_tu_dien_ctu else []
@@ -578,7 +576,6 @@ def xu_ly_file_bang_cli(input_file: Path, args: argparse.Namespace, force: bool 
         print(f"[PROCESS] Image local OCR: {input_file}")
         body, metadata = xu_ly_file_anh(input_file, cau_hinh)
         final_md = tao_metadata_markdown(input_file, metadata, cau_hinh) + body
-        final_md = postprocess_final_markdown(final_md)
         ghi_text_unicode(output_path, final_md)
         return output_path
 

@@ -26,8 +26,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional
 
-from table_form_postprocess import postprocess_final_markdown
-
 
 def _load_dotenv_if_available() -> list[Path]:
     """
@@ -138,12 +136,10 @@ def _default_ctu_prompt() -> str:
         "Đây là văn bản hành chính, quy định, quy trình, thủ tục hoặc biểu mẫu của Trường Đại học Cần Thơ. "
         "Hãy giữ đúng tiếng Việt có dấu, số hiệu văn bản, ngày tháng, đơn vị ban hành, tiêu đề, mục Chương/Điều/Khoản/Điểm, danh sách đánh số. "
         "Không tự tóm tắt nội dung. Xuất Markdown sạch để dùng cho RAG. "
-        "QUY TẮC BẢNG RẤT QUAN TRỌNG: Chỉ tạo Markdown table khi trên trang thật sự có bảng rõ ràng, có đường kẻ/cell/cột/hàng hoặc header cột như Bước, Lưu đồ, Nội dung công việc, Người thực hiện, Thời gian, Ghi chú, TT, Nội dung vi phạm, Lần 1, Lần 2, Lần 3, Phân loại. "
+        "QUY TẮC BẢNG RẤT QUAN TRỌNG: Chỉ tạo Markdown table khi trên trang thật sự có bảng rõ ràng, có đường kẻ/cell/cột/hàng hoặc header cột như Bước, Lưu đồ, Nội dung công việc, Người thực hiện, Thời gian, Ghi chú. "
         "Không được biến tiêu đề, mục 1/1.1/a/b/c, hoặc đoạn văn bản thường thành bảng. "
-        "Nếu bảng kéo dài sang trang sau, hãy lặp lại header bảng ở đầu trang sau để Markdown không bị mất cột. "
         "Nếu bảng có tên bảng nằm phía trên các cột, hãy đặt tên bảng thành heading riêng trước bảng; không lặp tên bảng trong từng header cột. "
-        "Header bảng chỉ giữ tên cột thật như Bước, Lưu đồ, Nội dung công việc, Người thực hiện, Thời gian thực hiện, Ghi chú, TT, Phân loại. "
-        "QUY TẮC BIỂU MẪU: Với tờ khai/phiếu/mẫu có dòng chấm, checkbox, trường Họ tên, Ngày sinh, Giới tính, CCCD, Nơi cấp, hãy giữ đúng từng trường theo dạng danh sách hoặc bảng 2 cột 'Trường thông tin' và 'Giá trị/ghi chú'; không bỏ các ô checkbox. "
+        "Header bảng chỉ giữ tên cột thật như Bước, Lưu đồ, Nội dung công việc, Người thực hiện, Thời gian thực hiện, Ghi chú. "
         "Nếu chỉ là văn bản bình thường, hãy giữ thành heading, paragraph và bullet list."
     )
 
@@ -513,7 +509,6 @@ def normalize_llamaparse_markdown(markdown: str, repair_false_tables: bool = Tru
 
     text = "\n".join(normalized_lines)
     text = re.sub(r"\n{3,}", "\n\n", text)
-    text = postprocess_final_markdown(text)
     return text.strip() + "\n"
 
 

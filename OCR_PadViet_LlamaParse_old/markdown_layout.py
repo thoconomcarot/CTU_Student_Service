@@ -56,20 +56,7 @@ def la_tieu_de_doc_lap(line: str) -> bool:
         "bieu mau",
         "quy trinh",
     }
-    if key in exact_titles:
-        return True
-
-    # Tiêu đề biểu mẫu thường dài hơn tiêu đề độc lập, nhưng vẫn là heading lớn.
-    form_title_prefixes = (
-        "to khai thong tin",
-        "mau to khai",
-        "mau bao cao",
-        "phu luc i",
-        "phu luc ii",
-        "phu luc iii",
-        "noi dung vi pham va khung xu ly",
-    )
-    return any(key.startswith(prefix) for prefix in form_title_prefixes) and len(key) <= 120
+    return key in exact_titles
 
 
 def la_heading_quy_trinh(line: str) -> bool:
@@ -313,9 +300,6 @@ def la_dong_co_cau_truc(line: str) -> bool:
     if not line:
         return True
     if line.startswith("<!--") or line.startswith("#"):
-        return True
-    # Dòng biểu mẫu có nhiều dấu chấm/placeholder cần giữ riêng, không gộp vào dòng trước.
-    if re.search(r"(\.{6,}|_{4,}|\[ \])", line):
         return True
     if line.startswith(("Kính gửi:", "Nơi nhận:", "KT.", "TM.", "TL.", "- ", "+ ", "• ")):
         return True

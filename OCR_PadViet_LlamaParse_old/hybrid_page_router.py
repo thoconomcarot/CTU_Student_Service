@@ -20,7 +20,6 @@ from typing import Optional
 from config import CAU_HINH_MAC_DINH, ghi_text_unicode, tao_thu_muc_can_thiet, ten_file_an_toan, tinh_checksum
 from document_page_analyzer import analyze_pdf_pages, group_contiguous_pages, table_pages_from_signals
 from llamaparse_engine import LlamaParseConfig, parse_with_llamaparse
-from table_form_postprocess import postprocess_final_markdown
 
 
 _PAGE_HEADER_RE = re.compile(r"(?=^## Trang\s+(\d+)\s*$)", re.MULTILINE)
@@ -229,20 +228,15 @@ def route_table_pages(
         return [], ["detect_tables_disabled"]
 
     signals = analyze_pdf_pages(input_path, page_start, page_end)
-    direct_pages = [s.page_number for s in signals if s.likely_table or getattr(s, "likely_form", False)]
-    table_direct_pages = [s.page_number for s in signals if s.likely_table]
-    form_direct_pages = [s.page_number for s in signals if getattr(s, "likely_form", False)]
+    direct_pages = [s.page_number for s in signals if s.likely_table]
     pages = table_pages_from_signals(signals, expand_contiguous_tables=True)
     logs = [
-        f"page={s.page_number} likely_table={s.likely_table} likely_form={getattr(s, 'likely_form', False)} "
-        f"vector={s.vector_line_count} raster_table={s.raster_line_score:.2f} "
-        f"raster_form={getattr(s, 'raster_form_score', 0.0):.2f} "
-        f"h={getattr(s, 'raster_horizontal_lines', 0)} v={getattr(s, 'raster_vertical_lines', 0)} "
-        f"keyword={s.keyword_score} form_score={getattr(s, 'form_score', 0)} reasons={s.reasons}"
+        f"page={s.page_number} likely_table={s.likely_table} vector={s.vector_line_count} "
+        f"raster={s.raster_line_score:.2f} keyword={s.keyword_score} reasons={s.reasons}"
         for s in signals
     ]
     if pages != direct_pages:
-        logs.append(f"expanded_table_or_form_pages table_direct={table_direct_pages} form_direct={form_direct_pages} expanded={pages}")
+        logs.append(f"expanded_table_pages direct={direct_pages} expanded={pages}")
     return pages, logs
 
 
@@ -317,14 +311,6 @@ def run_table_safe_pdf(
             aggressive_tables=aggressive_tables,
             repair_false_tables=repair_false_tables,
         )
-        # Chạy lại lớp sửa lỗi chung/từ điển CTU cho output LlamaParse để thống nhất
-        # với nhánh local OCR. Import lazy để tránh vòng import khi main gọi router.
-        if base_config is not None:
-            try:
-                from main import chay_ba_lop_hau_xu_ly
-                llama_blocks = {p: chay_ba_lop_hau_xu_ly(block, base_config) for p, block in llama_blocks.items()}
-            except Exception:
-                pass
         page_blocks.update(llama_blocks)
 
     # 3) Ghép đúng thứ tự trang, kèm log detector để dễ debug.
@@ -340,7 +326,6 @@ def run_table_safe_pdf(
     debug_log = "\n".join(f"<!-- layout_analyzer: {line} -->" for line in logs)
     ordered_blocks = [page_blocks.get(p, f"## Trang {p}\n\n<!-- page: {p} -->\n\n[Không tạo được nội dung trang này]") for p in all_pages]
     final_md = header + debug_log + "\n\n" + "\n\n---\n\n".join(clean_page_block(b) for b in ordered_blocks).strip() + "\n"
-    final_md = postprocess_final_markdown(final_md)
 
     ghi_text_unicode(output_path, final_md)
     return output_path

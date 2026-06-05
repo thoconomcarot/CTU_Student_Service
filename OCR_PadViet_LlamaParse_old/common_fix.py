@@ -95,58 +95,19 @@ def sua_so_dien_thoai(text: str) -> str:
 
 
 def sua_loi_tieng_viet_pho_bien(text: str) -> str:
-    """Sửa lỗi OCR phổ biến có tính tổng quát trong văn bản hành chính.
+    """Sửa một số lỗi tiếng Việt phổ biến và tương đối an toàn.
 
-    Nhóm rule này chỉ chứa lỗi có xác suất đúng cao, lặp lại ở nhiều tài liệu: 
-    tên cơ quan, thuật ngữ pháp lý, thuật ngữ biểu mẫu và lỗi dấu tiếng Việt thường gặp.
-    Không sửa số hiệu/ngày tháng cụ thể nếu không có bằng chứng từ file gốc.
+    Những lỗi này xuất hiện lặp lại trong văn bản hành chính/học vụ nên để ở lớp chung.
+    Không đưa lỗi riêng kiểu `1L8 -> 282` vào đây.
     """
 
     if not text:
         return ""
 
     rules = [
-        # Từ khóa pháp lý/hành chính phổ biến.
         (r"\bCăn\s+cử\b", "Căn cứ"),
         (r"\bCăn\s+củ\b", "Căn cứ"),
         (r"\bCăn\s+cửu\b", "Căn cứ"),
-        (r"\btin dụng\b", "tín dụng"),
-        (r"\btin\s+dụng\b", "tín dụng"),
-        (r"\bđảo tạo\b", "đào tạo"),
-        (r"\bĐào tào\b", "Đào tạo"),
-        (r"\bđề\s+giải ngân\s+v[ôo]n\s+vay\b", "để giải ngân vốn vay"),
-        (r"\bđề\s+hỗ trợ\b", "để hỗ trợ"),
-        (r"\bkỳ han\b", "kỳ hạn"),
-        (r"\bkỳ hạrn\b", "kỳ hạn"),
-        (r"\bv[ôo]n vay\b", "vốn vay"),
-        (r"\btỉnh hình\b", "tình hình"),
-        (r"\bthay döi\b", "thay đổi"),
-        (r"\bnganh, linh vuc\b", "ngành, lĩnh vực"),
-        (r"\bnghi học\b", "nghỉ học"),
-        (r"\bđóng dầu\b", "đóng dấu"),
-        (r"\bnghiện cứu sinh\b", "nghiên cứu sinh"),
-        (r"\bnghi[êe]n cứu sinh\b", "nghiên cứu sinh"),
-        (r"\bthạc sỹ\b", "thạc sĩ"),
-        (r"\bhọc bồng\b", "học bổng"),
-        (r"\bđỉnh kèm\b", "đính kèm"),
-        (r"\bkhoá học\b", "khóa học"),
-
-        # Tên quốc gia/cơ quan thường bị sai hoa-thường hoặc mất dấu trong OCR scan.
-        (r"\bviệt nam\b", "Việt Nam"),
-        (r"\bnhà nước việt nam\b", "Nhà nước Việt Nam"),
-        (r"\bngân hàng nhà nước việt nam\b", "Ngân hàng Nhà nước Việt Nam"),
-        (r"\bbộ tài chính\b", "Bộ Tài chính"),
-        (r"\bbộ giáo dục và đào tạo\b", "Bộ Giáo dục và Đào tạo"),
-        (r"\bngân hàng chính sách xã hội\b", "Ngân hàng Chính sách xã hội"),
-        (r"\bngân hàng chính sách xả hội\b", "Ngân hàng Chính sách xã hội"),
-        (r"\bThủ tướng chính phủ\b", "Thủ tướng Chính phủ"),
-        (r"\bphó thủ tướng chính phủ\b", "Phó Thủ tướng Chính phủ"),
-        (r"\bchính phủ\b", "Chính phủ"),
-        (r"\bCộng hòa xã hội chủ nghĩa việt nam\b", "Cộng hòa xã hội chủ nghĩa Việt Nam"),
-        (r"\bCọng hòa xã hội chủ nghĩa việt nam\b", "Cộng hòa xã hội chủ nghĩa Việt Nam"),
-        (r"\bCÒ G HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\b", "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"),
-
-        # CTU/giáo dục.
         (r"\bDai hoc\b", "Đại học"),
         (r"\bDẠI HỌC\b", "ĐẠI HỌC"),
         (r"\bCan Tho\b", "Cần Thơ"),
@@ -165,16 +126,8 @@ def sua_loi_tieng_viet_pho_bien(text: str) -> str:
         (r"\bDao tao\b", "Đào tạo"),
         (r"\bHieu truong\b", "Hiệu trưởng"),
         (r"\bUu tiên\b", "Ưu tiên"),
-
-        # Biểu mẫu/tờ khai.
-        (r"\bM[ẪÃA]U\s+2\s+Ở\s+KÍ:?\s+AI\s+THÔNG\s+TIN\b", "MẪU TỜ KHAI THÔNG TIN"),
-        (r"\bMAU\s+T[OỜ]\s+KHAI\b", "MẪU TỜ KHAI"),
-        (r"\bNGÂN\s+JANG\s+CHÍNH\s+SÁCH\s+XÃ\s+HỘI\b", "NGÂN HÀNG CHÍNH SÁCH XÃ HỘI"),
-        (r"\bTỜ\s+KHAI\s+THÔNG\s+TIN\s+HẰNG\s+NÃM\b", "TỜ KHAI THÔNG TIN HẰNG NĂM"),
-        (r"\bMÀ\s+50\s*-U.*?THÔNG\s+TIN\s+HÀNG\s+NĂM\s+CỦA\s+NGƯỜI\s+HỌC\b", "MẪU TỜ KHAI THÔNG TIN HẰNG NĂM CỦA NGƯỜI HỌC"),
-        (r"\bCCCD\s+số\b", "CCCD số"),
-        (r"\bCCD\s+số\b", "CCCD số"),
-        (r"\bngày cấp\b", "ngày cấp"),
+        (r"\bhọc bồng\b", "học bổng"),
+        (r"\bđỉnh kèm\b", "đính kèm"),
     ]
 
     for pattern, replacement in rules:
@@ -278,7 +231,4 @@ def hau_xu_ly_loi_chung(text: str) -> str:
     text = sua_khoang_trang_dinh_chu(text)
     text = sua_ky_tu_dac_biet_chung(text)
     text = chuan_hoa_ky_tu_co_ban(text)
-    # Bỏ watermark scanner phổ biến nếu OCR nhận vào nội dung.
-    text = re.sub(r"(?im)^\s*Scanned\s+with\s+(cs\s*)?CamScanner\s*$", "", text)
-    text = re.sub(r"(?im)^\s*CamScanner\s*$", "", text)
     return lam_sach_text(text)
